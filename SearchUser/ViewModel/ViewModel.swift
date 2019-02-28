@@ -9,73 +9,61 @@
 import Foundation
 
 protocol ViewModelDelegate: class {
-  func onFetchCompleted(with newIndexPathsToReload: [IndexPath]?)
+  func onFetchCompleted()
   func onFetchFailed(with reason: String)
 }
 
 class ViewModel {
-  private weak var delegate: ViewModelDelegate?
+  weak var delegate: ViewModelDelegate?
   private var currentPage = 1
   private var lastPage = 0
-  private var isFetchInProgress = false
   private var networkManager: NetworkManager!
   private var userInfos: [UserInfo] = []
   
-  init(networkManager: NetworkManager, delegate: ViewModelDelegate) {
+  init(networkManager: NetworkManager) {
     self.networkManager = networkManager
-    self.delegate = delegate
   }
   
   var totalCount: Int {
     return userInfos.count
   }
   
+  var shouldLoadingCell: Bool {
+    return currentPage < lastPage
+  }
+  
   func userInfo(at index: Int) -> UserInfo {
     return userInfos[index]
   }
   
+  func initCurrentPage() {
+    self.currentPage = 1
+  }
+  
   func fetchUsers(query: String) {
-    
-    guard !isFetchInProgress else {
-      return
-    }
-    
-    isFetchInProgress = true
     
     if let url = networkManager.getUrl(query: query, page: currentPage) {
       
-      networkManager.loadData(url: url) { result in
+      networkManager.loadData(url: url) { [weak self] result in
+        guard let self = self else { return }
         switch result {
         case .success(let pagedResponse):
-          DispatchQueue.main.async {
-            self.currentPage += 1
-            self.isFetchInProgress = false
-            self.lastPage = pagedResponse.0
-            let data = pagedResponse.1
-            let pagedUserInfos = self.networkManager.convertDataToUserInfo(data: data)
-            self.userInfos += pagedUserInfos
-            
-            if self.lastPage > self.currentPage {
-              let indexPathsToReload = self.calculateIndexPathsToReload(from: pagedUserInfos)
-              self.delegate?.onFetchCompleted(with: indexPathsToReload)
-            } else {
-              self.delegate?.onFetchCompleted(with: .none)
-            }
-          }
+          self.lastPage = pagedResponse.0
+          let data = pagedResponse.1
+          let pagedUserInfos = self.networkManager.convertDataToUserInfo(data: data)
+          self.userInfos += pagedUserInfos
+          self.delegate?.onFetchCompleted()
+          
         case .failure(let error):
-          DispatchQueue.main.async {
-            self.isFetchInProgress = false
-            self.delegate?.onFetchFailed(with: error.localizedDescription)
-          }
+          self.delegate?.onFetchFailed(with: error.localizedDescription)
         }
       }
       
     }
   }
   
-  private func calculateIndexPathsToReload(from newUserInfos: [UserInfo]) -> [IndexPath] {
-    let startIndex = userInfos.count - newUserInfos.count
-    let endIndex = startIndex + newUserInfos.count
-    return (startIndex..<endIndex).map { IndexPath(row: $0, section: 0) }
+  func fetchNextPage(query: String) {
+    currentPage += 1
+    fetchUsers(query: query)
   }
 }

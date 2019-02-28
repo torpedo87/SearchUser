@@ -17,7 +17,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
   func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
     window = UIWindow()
     window?.makeKeyAndVisible()
+    let networkManger = NetworkManager()
+    let viewModel = ViewModel(networkManager: networkManger)
     let viewController = ViewController()
+    viewController.viewModel = viewModel
     window?.rootViewController = UINavigationController(rootViewController: viewController)
     
     return true

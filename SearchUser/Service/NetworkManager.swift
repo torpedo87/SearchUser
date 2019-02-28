@@ -42,8 +42,8 @@ class NetworkManager {
   func loadData(url: URL,
                 comopletionHandler: @escaping (Result<PagedResponse, LoadingError>) -> Void) {
     
-    let task = session.dataTask(with: url) { (data, response, error) in
-      
+    let task = session.dataTask(with: url) { [weak self] (data, response, error) in
+      guard let self = self else { return }
       if let _ = error {
         comopletionHandler(.failure(.client))
         return

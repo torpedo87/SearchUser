@@ -9,14 +9,7 @@
 import UIKit
 
 class ViewController: UIViewController {
-  private var viewModel: ViewModel!
-  private lazy var indicatorView: UIActivityIndicatorView = {
-    let spinner = UIActivityIndicatorView()
-    spinner.translatesAutoresizingMaskIntoConstraints = false
-    spinner.hidesWhenStopped = true
-    spinner.color = UIColor.blue
-    return spinner
-  }()
+  var viewModel: ViewModel!
   
   private lazy var searchController: UISearchController = {
     let controller = UISearchController(searchResultsController: nil)
@@ -35,34 +28,23 @@ class ViewController: UIViewController {
     tableView.backgroundColor = UIColor.clear
     tableView.delegate = self
     tableView.dataSource = self
-    tableView.rowHeight = 75
-    
+    tableView.estimatedRowHeight = 75
+    tableView.rowHeight = UITableView.automaticDimension
     return tableView
   }()
   
   override func viewDidLoad() {
     super.viewDidLoad()
-    let networkManager = NetworkManager()
-    viewModel = ViewModel(networkManager: networkManager, delegate: self)
     view.backgroundColor = .white
     navigationItem.searchController = searchController
     view.addSubview(tableView)
-    view.addSubview(indicatorView)
+    viewModel.delegate = self
     
     tableView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor).isActive = true
     tableView.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor).isActive = true
     tableView.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor).isActive = true
     tableView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor).isActive = true
-    
-    NSLayoutConstraint.activate([
-        indicatorView.widthAnchor.constraint(equalToConstant: 30),
-        indicatorView.heightAnchor.constraint(equalToConstant: 30),
-        indicatorView.centerXAnchor.constraint(equalTo: tableView.centerXAnchor),
-        indicatorView.centerYAnchor.constraint(equalTo: tableView.centerYAnchor)
-    ])
   }
-  
-  
   
   func searchBarIsEmpty() -> Bool {
     return searchController.searchBar.text?.isEmpty ?? true
@@ -72,30 +54,36 @@ class ViewController: UIViewController {
 extension ViewController: UITableViewDataSource {
   
   func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-    return viewModel.totalCount
+    let totalCount = viewModel.totalCount
+    return viewModel.shouldLoadingCell ? totalCount + 1 : totalCount
   }
   
   func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-    if let cell = tableView.dequeueReusableCell(withIdentifier: UserListCell.reuseIdentifier,
-                                                for: indexPath) as? UserListCell {
-      let userInfo = viewModel.userInfo(at: indexPath.row)
-      cell.configure(userInfo: userInfo)
-      return cell
+    if isLoadingIndexPath(indexPath) {
+      return LoadingCell(style: .default, reuseIdentifier: "LoadingCell")
+    } else {
+      if let cell = tableView.dequeueReusableCell(withIdentifier: UserListCell.reuseIdentifier,
+                                                  for: indexPath) as? UserListCell {
+        let userInfo = viewModel.userInfo(at: indexPath.row)
+        cell.configure(userInfo: userInfo)
+        return cell
+      }
+      return UITableViewCell()
     }
-    return UITableViewCell()
   }
   
+  private func isLoadingIndexPath(_ indexPath: IndexPath) -> Bool {
+    guard viewModel.shouldLoadingCell else { return false }
+    return indexPath.row == viewModel.totalCount
+  }
 }
 
 extension ViewController: UITableViewDelegate {
   
   func tableView(_ tableView: UITableView, willDisplay cell: UITableViewCell, forRowAt indexPath: IndexPath) {
+    guard isLoadingIndexPath(indexPath) else { return }
     guard !searchBarIsEmpty() else { return }
-    let lastElement = viewModel.totalCount - 1
-    if indexPath.row == lastElement {
-      indicatorView.startAnimating()
-      viewModel.fetchUsers(query: searchController.searchBar.text!)
-    }
+    viewModel.fetchNextPage(query: searchController.searchBar.text!)
   }
 }
 
@@ -104,31 +92,20 @@ extension ViewController: UISearchResultsUpdating {
   func updateSearchResults(for searchController: UISearchController) {
     
     guard !searchBarIsEmpty() else { return }
-    indicatorView.startAnimating()
+    viewModel.initCurrentPage()
     viewModel.fetchUsers(query: searchController.searchBar.text!)
   }
 }
 
 extension ViewController: ViewModelDelegate {
-  
-  func onFetchCompleted(with newIndexPathsToReload: [IndexPath]?) {
-    guard let newIndexPathsToReload = newIndexPathsToReload else {
-      indicatorView.stopAnimating()
-      tableView.reloadData()
-      return
+  func onFetchCompleted() {
+    DispatchQueue.main.async {
+      self.tableView.reloadData()
     }
-    let indexPathsToReload = visibleIndexPathsToReload(intersecting: newIndexPathsToReload)
-    tableView.reloadRows(at: indexPathsToReload, with: .automatic)
   }
   
   func onFetchFailed(with reason: String) {
-    indicatorView.stopAnimating()
-    print("fetch fail")
+    print(reason)
   }
   
-  private func visibleIndexPathsToReload(intersecting indexPaths: [IndexPath]) -> [IndexPath] {
-    let indexPathsForVisibleRows = tableView.indexPathsForVisibleRows ?? []
-    let indexPathsIntersection = Set(indexPathsForVisibleRows).intersection(indexPaths)
-    return Array(indexPathsIntersection)
-  }
 }
