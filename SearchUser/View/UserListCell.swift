@@ -13,6 +13,7 @@ class UserListCell: UITableViewCell {
   static let reuseIdentifier: String = "UserListCell"
   
   private let containerLayoutGuide = UILayoutGuide()
+  
   private lazy var imgView: UIImageView = {
     let imgView = UIImageView()
     imgView.translatesAutoresizingMaskIntoConstraints = false
@@ -24,6 +25,7 @@ class UserListCell: UITableViewCell {
     stackView.axis = .vertical
     stackView.translatesAutoresizingMaskIntoConstraints = false
     stackView.spacing = 3
+    stackView.distribution = .fill
     return stackView
   }()
   private lazy var usernameLabel: UILabel = {
@@ -70,14 +72,14 @@ class UserListCell: UITableViewCell {
     imgView.loadImageWithUrlString(urlString: userInfo.avatar_url)
     labelStackView.addArrangedSubview(usernameLabel)
     labelStackView.addArrangedSubview(scoreLabel)
-    
     usernameLabel.text = userInfo.login
     scoreLabel.text = "score : \(userInfo.score)"
-    
   }
   
   override func prepareForReuse() {
     super.prepareForReuse()
-    
+    usernameLabel.text = nil
+    imgView.image = nil
+    scoreLabel.text = nil
   }
 }

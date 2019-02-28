@@ -32,6 +32,7 @@ enum LoadingError: Error {
 class NetworkManager {
   
   private let session: URLSession
+  var lastPage = 0
   
   init(session: URLSession = .shared) {
     self.session = session
@@ -48,6 +49,10 @@ class NetworkManager {
       }
       
       if let httpResponse = response as? HTTPURLResponse {
+        if let link = httpResponse.allHeaderFields["Link"] as? String {
+          self.lastPage = (self.getLastPageFromLinkHeader(link: link))
+        }
+        
         if !(200...299).contains(httpResponse.statusCode) {
           comopletionHandler(.failure(.server))
           return
@@ -60,10 +65,16 @@ class NetworkManager {
     task.resume()
   }
   
+  private func getLastPageFromLinkHeader(link: String) -> Int {
+    let temp = link.components(separatedBy: "=")[7]
+    let lastPage = Int((temp.components(separatedBy: "&")[0]))!
+    return lastPage
+  }
+  
   func convertDataToUserInfo(data: Data) -> [UserInfo] {
     if let json = try? JSONSerialization.jsonObject(with: data, options: []),
       let dict = json as? [String: Any],
-      let results = dict["results"] as? [[String:Any]] {
+      let results = dict["items"] as? [[String:Any]] {
       var list: [UserInfo] = []
       for result in results {
         if let userInfo = UserInfo(result: result) {
@@ -75,13 +86,14 @@ class NetworkManager {
     return []
   }
   
-  func getUrl(query: String) -> URL? {
+  func getUrl(query: String, page: Int) -> URL? {
     
     guard var url = URL(string: "https://api.github.com/search/users") else {
       return nil
     }
     let urlParams = [
       "q": query,
+      "page": "\(page)"
       ]
     
     url = url.appendingQueryParameters(urlParams)
