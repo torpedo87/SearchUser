@@ -60,5 +60,31 @@ class NetworkManager {
     task.resume()
   }
   
+  func convertDataToUserInfo(data: Data) -> [UserInfo] {
+    if let json = try? JSONSerialization.jsonObject(with: data, options: []),
+      let dict = json as? [String: Any],
+      let results = dict["results"] as? [[String:Any]] {
+      var list: [UserInfo] = []
+      for result in results {
+        if let userInfo = UserInfo(result: result) {
+          list.append(userInfo)
+        }
+      }
+      return list
+    }
+    return []
+  }
+  
+  func getUrl(query: String) -> URL? {
+    
+    guard var url = URL(string: "https://api.github.com/search/users") else {
+      return nil
+    }
+    let urlParams = [
+      "q": query,
+      ]
+    
+    url = url.appendingQueryParameters(urlParams)
+    return url
+  }
 }
-
