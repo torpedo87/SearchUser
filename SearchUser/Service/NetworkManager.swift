@@ -8,6 +8,8 @@
 
 import Foundation
 
+typealias PagedResponse = (Int, Data)
+
 enum Result<Value, Error: Swift.Error> {
   case success(Value)
   case failure(Error)
@@ -32,14 +34,13 @@ enum LoadingError: Error {
 class NetworkManager {
   
   private let session: URLSession
-  var lastPage = 0
   
   init(session: URLSession = .shared) {
     self.session = session
   }
   
   func loadData(url: URL,
-                comopletionHandler: @escaping (Result<Data, LoadingError>) -> Void) {
+                comopletionHandler: @escaping (Result<PagedResponse, LoadingError>) -> Void) {
     
     let task = session.dataTask(with: url) { (data, response, error) in
       
@@ -50,7 +51,11 @@ class NetworkManager {
       
       if let httpResponse = response as? HTTPURLResponse {
         if let link = httpResponse.allHeaderFields["Link"] as? String {
-          self.lastPage = (self.getLastPageFromLinkHeader(link: link))
+          let lastPage = (self.getLastPageFromLinkHeader(link: link))
+          if let data = data {
+            let pagedResponse = (lastPage, data)
+            comopletionHandler(.success(pagedResponse))
+          }
         }
         
         if !(200...299).contains(httpResponse.statusCode) {
@@ -58,17 +63,15 @@ class NetworkManager {
           return
         }
       }
-      if let data = data {
-        comopletionHandler(.success(data))
-      }
+      
     }
     task.resume()
   }
   
   private func getLastPageFromLinkHeader(link: String) -> Int {
-    let temp = link.components(separatedBy: "=")[7]
-    let lastPage = Int((temp.components(separatedBy: "&")[0]))!
-    return lastPage
+    let strWithLastPage = link.components(separatedBy: "=")[4]
+    let lastPage = strWithLastPage.components(separatedBy: "&")[0]
+    return Int(lastPage) ?? 0
   }
   
   func convertDataToUserInfo(data: Data) -> [UserInfo] {

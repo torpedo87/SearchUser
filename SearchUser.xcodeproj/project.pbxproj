@@ -16,6 +16,7 @@
 		4871E6CB22279A25006AB7BA /* UserInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4871E6CA22279A25006AB7BA /* UserInfo.swift */; };
 		4871E6CE2227A806006AB7BA /* UIImageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4871E6CD2227A806006AB7BA /* UIImageView.swift */; };
 		4871E6D02227A824006AB7BA /* URL.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4871E6CF2227A824006AB7BA /* URL.swift */; };
+		4871E6D5222802FE006AB7BA /* ViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4871E6D4222802FE006AB7BA /* ViewModel.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -30,6 +31,7 @@
 		4871E6CA22279A25006AB7BA /* UserInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserInfo.swift; sourceTree = "<group>"; };
 		4871E6CD2227A806006AB7BA /* UIImageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UIImageView.swift; sourceTree = "<group>"; };
 		4871E6CF2227A824006AB7BA /* URL.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = URL.swift; sourceTree = "<group>"; };
+		4871E6D4222802FE006AB7BA /* ViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewModel.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -62,6 +64,7 @@
 		4871E6AF222795EA006AB7BA /* SearchUser */ = {
 			isa = PBXGroup;
 			children = (
+				4871E6D3222802E9006AB7BA /* ViewModel */,
 				4871E6CC2227A7F6006AB7BA /* Extension */,
 				4871E6C52227981D006AB7BA /* Service */,
 				4871E6C422279625006AB7BA /* Model */,
@@ -114,6 +117,14 @@
 				4871E6CF2227A824006AB7BA /* URL.swift */,
 			);
 			path = Extension;
+			sourceTree = "<group>";
+		};
+		4871E6D3222802E9006AB7BA /* ViewModel */ = {
+			isa = PBXGroup;
+			children = (
+				4871E6D4222802FE006AB7BA /* ViewModel.swift */,
+			);
+			path = ViewModel;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -192,6 +203,7 @@
 				4871E6D02227A824006AB7BA /* URL.swift in Sources */,
 				4871E6CB22279A25006AB7BA /* UserInfo.swift in Sources */,
 				4871E6CE2227A806006AB7BA /* UIImageView.swift in Sources */,
+				4871E6D5222802FE006AB7BA /* ViewModel.swift in Sources */,
 				4871E6B1222795EA006AB7BA /* AppDelegate.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
