@@ -10,7 +10,7 @@ import UIKit
 
 class ViewController: UIViewController {
   var viewModel: ViewModel!
-  
+  var userList: [UserInfo] = []
   private lazy var searchController: UISearchController = {
     let controller = UISearchController(searchResultsController: nil)
     controller.obscuresBackgroundDuringPresentation = false
@@ -54,7 +54,7 @@ class ViewController: UIViewController {
 extension ViewController: UITableViewDataSource {
   
   func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-    let totalCount = viewModel.getTotalCount()
+    let totalCount = userList.count
     return viewModel.getShouldShowLoadingCell() ? totalCount + 1 : totalCount
   }
   
@@ -66,6 +66,7 @@ extension ViewController: UITableViewDataSource {
                                                   for: indexPath) as? UserListCell {
         let userInfo = viewModel.getUserInfo(at: indexPath.row)
         cell.configure(userInfo: userInfo)
+        cell.delegate = self
         return cell
       }
       return UITableViewCell()
@@ -74,7 +75,7 @@ extension ViewController: UITableViewDataSource {
   
   private func isLoadingIndexPath(_ indexPath: IndexPath) -> Bool {
     guard viewModel.getShouldShowLoadingCell() else { return false }
-    return indexPath.row == viewModel.getTotalCount()
+    return indexPath.row == userList.count
   }
 }
 
@@ -98,14 +99,20 @@ extension ViewController: UISearchResultsUpdating {
 }
 
 extension ViewController: ViewModelDelegate {
-  func onFetchCompleted() {
+  func orgFetchCompleted(_ list: [String], cell: UserListCell) {
+    cell.updateOrgImgViews(imgUrls: list)
+  }
+  
+  func userFetchCompleted(_ list: [UserInfo]) {
     DispatchQueue.main.async {
+      self.userList = list
       self.tableView.reloadData()
     }
   }
-  
-  func onFetchFailed(with reason: String) {
-    print(reason)
+}
+
+extension ViewController: UserListCellDelegate {
+  func requestOrgUrls(cell: UserListCell, username: String) {
+    viewModel.fetchOrg(username: username, cell: cell)
   }
-  
 }

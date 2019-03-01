@@ -39,7 +39,7 @@ class NetworkManager {
     self.session = session
   }
   
-  func loadData(url: URL,
+  func loadUserData(url: URL,
                 comopletionHandler: @escaping (Result<PagedResponse, LoadingError>) -> Void) {
     
     let task = session.dataTask(with: url) { [weak self] (data, response, error) in
@@ -66,6 +66,29 @@ class NetworkManager {
           }
         }
         
+        if !(200...299).contains(httpResponse.statusCode) {
+          comopletionHandler(.failure(.server))
+          return
+        }
+      }
+      
+    }
+    task.resume()
+  }
+  
+  func loadOrgData(url: URL,
+                    comopletionHandler: @escaping (Result<Data, LoadingError>) -> Void) {
+    
+    let task = session.dataTask(with: url) { (data, response, error) in
+      if let _ = error {
+        comopletionHandler(.failure(.client))
+        return
+      }
+      
+      if let httpResponse = response as? HTTPURLResponse {
+        if let data = data {
+          comopletionHandler(.success(data))
+        }
         
         if !(200...299).contains(httpResponse.statusCode) {
           comopletionHandler(.failure(.server))
@@ -81,34 +104,5 @@ class NetworkManager {
     let strWithLastPage = link.components(separatedBy: "=")[4]
     let lastPage = strWithLastPage.components(separatedBy: "&")[0]
     return Int(lastPage) ?? 0
-  }
-  
-  func convertDataToUserInfo(data: Data) -> [UserInfo] {
-    if let json = try? JSONSerialization.jsonObject(with: data, options: []),
-      let dict = json as? [String: Any],
-      let results = dict["items"] as? [[String:Any]] {
-      var list: [UserInfo] = []
-      for result in results {
-        if let userInfo = UserInfo(result: result) {
-          list.append(userInfo)
-        }
-      }
-      return list
-    }
-    return []
-  }
-  
-  func getUrl(query: String, page: Int) -> URL? {
-    
-    guard var url = URL(string: "https://api.github.com/search/users") else {
-      return nil
-    }
-    let urlParams = [
-      "q": query,
-      "page": "\(page)"
-      ]
-    
-    url = url.appendingQueryParameters(urlParams)
-    return url
   }
 }
