@@ -68,12 +68,13 @@ class UserListCell: UITableViewCell {
     addLayoutGuide(containerLayoutGuide)
     addSubview(imgView)
     addSubview(labelStackView)
-    
-    imgView.loadImageWithUrlString(urlString: userInfo.avatar_url)
     labelStackView.addArrangedSubview(usernameLabel)
     labelStackView.addArrangedSubview(scoreLabel)
+    
+    imgView.loadImageWithUrlString(urlString: userInfo.avatar_url)
     usernameLabel.text = userInfo.login
     scoreLabel.text = "score : \(userInfo.score)"
+    self.layoutIfNeeded()
   }
   
   override func prepareForReuse() {

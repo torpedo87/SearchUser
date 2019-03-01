@@ -14,6 +14,7 @@ protocol ViewModelDelegate: class {
 }
 
 class ViewModel {
+  private var shouldShowLoadingCell = false
   weak var delegate: ViewModelDelegate?
   private var currentPage = 1
   private var lastPage = 0
@@ -24,34 +25,38 @@ class ViewModel {
     self.networkManager = networkManager
   }
   
-  var totalCount: Int {
+  func getTotalCount() -> Int {
     return userInfos.count
   }
   
-  var shouldLoadingCell: Bool {
-    return currentPage < lastPage
+  func getShouldShowLoadingCell() -> Bool {
+    return shouldShowLoadingCell
   }
   
-  func userInfo(at index: Int) -> UserInfo {
+  func getUserInfo(at index: Int) -> UserInfo {
     return userInfos[index]
   }
   
-  func initCurrentPage() {
+  func refreshList() {
     self.currentPage = 1
+    self.userInfos = []
   }
   
   func fetchUsers(query: String) {
-    
+    print("Fetching page \(currentPage)/\(lastPage)")
     if let url = networkManager.getUrl(query: query, page: currentPage) {
       
       networkManager.loadData(url: url) { [weak self] result in
         guard let self = self else { return }
         switch result {
         case .success(let pagedResponse):
-          self.lastPage = pagedResponse.0
+          if self.lastPage == 0 {
+            self.lastPage = pagedResponse.0
+          }
           let data = pagedResponse.1
           let pagedUserInfos = self.networkManager.convertDataToUserInfo(data: data)
           self.userInfos += pagedUserInfos
+          self.shouldShowLoadingCell = self.currentPage < self.lastPage
           self.delegate?.onFetchCompleted()
           
         case .failure(let error):

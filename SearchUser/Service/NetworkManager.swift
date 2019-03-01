@@ -34,7 +34,7 @@ enum LoadingError: Error {
 class NetworkManager {
   
   private let session: URLSession
-  
+  var gotLastPage: Bool = false
   init(session: URLSession = .shared) {
     self.session = session
   }
@@ -50,13 +50,22 @@ class NetworkManager {
       }
       
       if let httpResponse = response as? HTTPURLResponse {
-        if let link = httpResponse.allHeaderFields["Link"] as? String {
-          let lastPage = (self.getLastPageFromLinkHeader(link: link))
+        if !self.gotLastPage {
+          if let link = httpResponse.allHeaderFields["Link"] as? String {
+            let lastPage = (self.getLastPageFromLinkHeader(link: link))
+            self.gotLastPage = true
+            if let data = data {
+              let pagedResponse = (lastPage, data)
+              comopletionHandler(.success(pagedResponse))
+            }
+          }
+        } else {
           if let data = data {
-            let pagedResponse = (lastPage, data)
+            let pagedResponse = (-1, data)
             comopletionHandler(.success(pagedResponse))
           }
         }
+        
         
         if !(200...299).contains(httpResponse.statusCode) {
           comopletionHandler(.failure(.server))

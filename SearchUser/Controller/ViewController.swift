@@ -54,8 +54,8 @@ class ViewController: UIViewController {
 extension ViewController: UITableViewDataSource {
   
   func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-    let totalCount = viewModel.totalCount
-    return viewModel.shouldLoadingCell ? totalCount + 1 : totalCount
+    let totalCount = viewModel.getTotalCount()
+    return viewModel.getShouldShowLoadingCell() ? totalCount + 1 : totalCount
   }
   
   func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
@@ -64,7 +64,7 @@ extension ViewController: UITableViewDataSource {
     } else {
       if let cell = tableView.dequeueReusableCell(withIdentifier: UserListCell.reuseIdentifier,
                                                   for: indexPath) as? UserListCell {
-        let userInfo = viewModel.userInfo(at: indexPath.row)
+        let userInfo = viewModel.getUserInfo(at: indexPath.row)
         cell.configure(userInfo: userInfo)
         return cell
       }
@@ -73,8 +73,8 @@ extension ViewController: UITableViewDataSource {
   }
   
   private func isLoadingIndexPath(_ indexPath: IndexPath) -> Bool {
-    guard viewModel.shouldLoadingCell else { return false }
-    return indexPath.row == viewModel.totalCount
+    guard viewModel.getShouldShowLoadingCell() else { return false }
+    return indexPath.row == viewModel.getTotalCount()
   }
 }
 
@@ -92,7 +92,7 @@ extension ViewController: UISearchResultsUpdating {
   func updateSearchResults(for searchController: UISearchController) {
     
     guard !searchBarIsEmpty() else { return }
-    viewModel.initCurrentPage()
+    viewModel.refreshList()
     viewModel.fetchUsers(query: searchController.searchBar.text!)
   }
 }
