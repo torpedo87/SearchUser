@@ -10,7 +10,6 @@ import UIKit
 
 class ViewController: UIViewController {
   var viewModel: ViewModel!
-  var userList: [UserInfo] = []
   private lazy var searchController: UISearchController = {
     let controller = UISearchController(searchResultsController: nil)
     controller.obscuresBackgroundDuringPresentation = false
@@ -28,7 +27,7 @@ class ViewController: UIViewController {
     tableView.backgroundColor = UIColor.clear
     tableView.delegate = self
     tableView.dataSource = self
-    tableView.estimatedRowHeight = 75
+    tableView.estimatedRowHeight = 44
     tableView.rowHeight = UITableView.automaticDimension
     return tableView
   }()
@@ -54,7 +53,7 @@ class ViewController: UIViewController {
 extension ViewController: UITableViewDataSource {
   
   func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-    let totalCount = userList.count
+    let totalCount = viewModel.totalCount()
     return viewModel.getShouldShowLoadingCell() ? totalCount + 1 : totalCount
   }
   
@@ -65,7 +64,7 @@ extension ViewController: UITableViewDataSource {
       if let cell = tableView.dequeueReusableCell(withIdentifier: UserListCell.reuseIdentifier,
                                                   for: indexPath) as? UserListCell {
         let userInfo = viewModel.getUserInfo(at: indexPath.row)
-        cell.configure(userInfo: userInfo)
+        cell.configure(userInfo: userInfo, indexPath: indexPath)
         cell.delegate = self
         return cell
       }
@@ -75,7 +74,7 @@ extension ViewController: UITableViewDataSource {
   
   private func isLoadingIndexPath(_ indexPath: IndexPath) -> Bool {
     guard viewModel.getShouldShowLoadingCell() else { return false }
-    return indexPath.row == userList.count
+    return indexPath.row == viewModel.totalCount()
   }
 }
 
@@ -99,20 +98,24 @@ extension ViewController: UISearchResultsUpdating {
 }
 
 extension ViewController: ViewModelDelegate {
-  func orgFetchCompleted(_ list: [String], cell: UserListCell) {
-    cell.updateOrgImgViews(imgUrls: list)
+  func orgFetchCompleted(indexPath: IndexPath) {
+    DispatchQueue.main.async {
+      self.tableView.reloadRows(at: [indexPath], with: .automatic)
+      if let cell = self.tableView.cellForRow(at: indexPath) as? UserListCell {
+        cell.toggleBottomView()
+      }
+    }
   }
   
-  func userFetchCompleted(_ list: [UserInfo]) {
+  func userFetchCompleted() {
     DispatchQueue.main.async {
-      self.userList = list
       self.tableView.reloadData()
     }
   }
 }
 
 extension ViewController: UserListCellDelegate {
-  func requestOrgUrls(cell: UserListCell, username: String) {
-    viewModel.fetchOrg(username: username, cell: cell)
+  func requestOrgUrls(username: String, indexPath: IndexPath) {
+    viewModel.fetchOrg(username: username, indexPath: indexPath)
   }
 }

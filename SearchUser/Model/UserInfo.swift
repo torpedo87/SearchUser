@@ -12,6 +12,7 @@ struct UserInfo {
   var avatar_url: String
   var score: Double
   var login: String
+  var org_urls: [String] = []
 }
 
 extension UserInfo {

@@ -39,7 +39,7 @@ class NetworkManager {
     self.session = session
   }
   
-  func loadUserData(url: URL,
+  func loadPagedData(url: URL,
                 comopletionHandler: @escaping (Result<PagedResponse, LoadingError>) -> Void) {
     
     let task = session.dataTask(with: url) { [weak self] (data, response, error) in
@@ -76,7 +76,7 @@ class NetworkManager {
     task.resume()
   }
   
-  func loadOrgData(url: URL,
+  func loadData(url: URL,
                     comopletionHandler: @escaping (Result<Data, LoadingError>) -> Void) {
     
     let task = session.dataTask(with: url) { (data, response, error) in

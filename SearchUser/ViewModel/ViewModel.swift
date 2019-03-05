@@ -9,8 +9,8 @@
 import Foundation
 
 protocol ViewModelDelegate: class {
-  func userFetchCompleted(_ list: [UserInfo])
-  func orgFetchCompleted(_ list: [String], cell: UserListCell)
+  func userFetchCompleted()
+  func orgFetchCompleted(indexPath: IndexPath)
 }
 
 class ViewModel {
@@ -23,6 +23,10 @@ class ViewModel {
   
   init(networkManager: NetworkManager) {
     self.networkManager = networkManager
+  }
+  
+  func totalCount() -> Int {
+    return userInfos.count
   }
   
   func getShouldShowLoadingCell() -> Bool {
@@ -38,14 +42,15 @@ class ViewModel {
     self.userInfos = []
   }
   
-  func fetchOrg(username: String, cell: UserListCell) {
+  func fetchOrg(username: String, indexPath: IndexPath) {
     if let url = getOrgUrl(username: username) {
-      networkManager.loadOrgData(url: url) { [weak self] (result) in
+      networkManager.loadData(url: url) { [weak self] (result) in
         guard let self = self else { return }
         switch result {
         case .success(let data):
           let orgUrls = self.convertDataToOrgUrlString(data: data)
-          self.delegate?.orgFetchCompleted(orgUrls, cell: cell)
+          self.userInfos[indexPath.row].org_urls = orgUrls
+          self.delegate?.orgFetchCompleted(indexPath: indexPath)
         case .failure(let error):
           print(error.localizedDescription)
         }
@@ -54,10 +59,9 @@ class ViewModel {
   }
   
   func fetchUsers(query: String) {
-    print("Fetching page \(currentPage)/\(lastPage)")
     if let url = getSearchUrl(query: query, page: currentPage) {
       
-      networkManager.loadUserData(url: url) { [weak self] result in
+      networkManager.loadPagedData(url: url) { [weak self] result in
         guard let self = self else { return }
         switch result {
         case .success(let pagedResponse):
@@ -68,7 +72,7 @@ class ViewModel {
           let pagedUserInfos = self.convertDataToUserInfo(data: data)
           self.userInfos += pagedUserInfos
           self.shouldShowLoadingCell = self.currentPage < self.lastPage
-          self.delegate?.userFetchCompleted(self.userInfos)
+          self.delegate?.userFetchCompleted()
           
         case .failure(let error):
           print(error.localizedDescription)
@@ -100,8 +104,7 @@ class ViewModel {
   
   private func convertDataToOrgUrlString(data: Data) -> [String] {
     if let json = try? JSONSerialization.jsonObject(with: data, options: []),
-      let dict = json as? [String: Any],
-      let results = dict["result"] as? [[String:Any]] {
+      let results = json as? [[String:Any]] {
       var list: [String] = []
       for result in results {
         if let orgUrlString = result["avatar_url"] as? String {
