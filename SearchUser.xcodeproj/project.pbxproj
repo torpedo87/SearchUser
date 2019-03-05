@@ -18,6 +18,7 @@
 		4871E6D02227A824006AB7BA /* URL.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4871E6CF2227A824006AB7BA /* URL.swift */; };
 		4871E6D5222802FE006AB7BA /* ViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4871E6D4222802FE006AB7BA /* ViewModel.swift */; };
 		4871E6D922283DF3006AB7BA /* LoadingCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4871E6D822283DF3006AB7BA /* LoadingCell.swift */; };
+		4871E6DB222EC06C006AB7BA /* PagingManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4871E6DA222EC06C006AB7BA /* PagingManager.swift */; };
 		EF4D68934B14FB077667A880 /* Pods_SearchUser.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A9E74F090CDF06763F1EFD11 /* Pods_SearchUser.framework */; };
 /* End PBXBuildFile section */
 
@@ -36,6 +37,7 @@
 		4871E6CF2227A824006AB7BA /* URL.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = URL.swift; sourceTree = "<group>"; };
 		4871E6D4222802FE006AB7BA /* ViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewModel.swift; sourceTree = "<group>"; };
 		4871E6D822283DF3006AB7BA /* LoadingCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoadingCell.swift; sourceTree = "<group>"; };
+		4871E6DA222EC06C006AB7BA /* PagingManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PagingManager.swift; sourceTree = "<group>"; };
 		A9E74F090CDF06763F1EFD11 /* Pods_SearchUser.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_SearchUser.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		BBA87E223F455FB45785B32A /* Pods-SearchUser.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-SearchUser.debug.xcconfig"; path = "Pods/Target Support Files/Pods-SearchUser/Pods-SearchUser.debug.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -125,6 +127,7 @@
 			isa = PBXGroup;
 			children = (
 				4871E6C62227982D006AB7BA /* NetworkManager.swift */,
+				4871E6DA222EC06C006AB7BA /* PagingManager.swift */,
 			);
 			path = Service;
 			sourceTree = "<group>";
@@ -280,6 +283,7 @@
 				4871E6C92227996F006AB7BA /* UserListCell.swift in Sources */,
 				4871E6C72227982D006AB7BA /* NetworkManager.swift in Sources */,
 				4871E6B3222795EA006AB7BA /* ViewController.swift in Sources */,
+				4871E6DB222EC06C006AB7BA /* PagingManager.swift in Sources */,
 				4871E6D02227A824006AB7BA /* URL.swift in Sources */,
 				4871E6CB22279A25006AB7BA /* UserInfo.swift in Sources */,
 				4871E6CE2227A806006AB7BA /* UIImageView.swift in Sources */,

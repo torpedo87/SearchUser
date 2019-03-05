@@ -7,84 +7,97 @@
 //
 
 import Foundation
-
-protocol ViewModelDelegate: class {
-  func userFetchCompleted()
-  func orgFetchCompleted(indexPath: IndexPath)
-}
+import RxSwift
 
 class ViewModel {
-  private var shouldShowLoadingCell = false
-  weak var delegate: ViewModelDelegate?
-  private var currentPage = 1
-  private var lastPage = 0
+  var searchInput = PublishSubject<String>()
   private var networkManager: NetworkManager!
-  private var userInfos: [UserInfo] = []
+  private var pagingManager: PagingManager!
+  let userInfoList = Variable<[UserInfo]>([])
+  private let bag = DisposeBag()
   
-  init(networkManager: NetworkManager) {
+  init(networkManager: NetworkManager, pagingManager: PagingManager) {
     self.networkManager = networkManager
+    self.pagingManager = pagingManager
+    
+    searchInput.asObservable()
+      .do(onNext: { [unowned self] _ in
+        self.refreshList()
+      })
+      .map({ [unowned self] query -> URL? in
+        return self.getSearchUrl(query: query, page: self.pagingManager.getCurrentPage())
+      })
+      .filter{ $0 != nil }
+      .flatMap({ [unowned self] finalUrl -> Observable<[UserInfo]> in
+        guard let url = finalUrl else { return Observable.empty() }
+        return self.fetchUserList(finalUrl: url)
+      })
+      .bind(to: userInfoList)
+      .disposed(by: bag)
   }
   
-  func totalCount() -> Int {
-    return userInfos.count
+  func fetchUserList(finalUrl: URL) -> Observable<[UserInfo]> {
+    return networkManager.loadPagedData(finalUrl: finalUrl)
+      .do(onNext: { [unowned self] result in
+        switch result {
+        case .success(let pagedResponse):
+          if !self.pagingManager.isSetLastPage {
+            self.pagingManager.setLastPage(last: pagedResponse.0)
+          }
+        case .failure(_):
+          break
+        }
+      })
+      .map({ [unowned self] result -> [UserInfo] in
+        switch result {
+        case .success(let pagedResponse):
+          let data = pagedResponse.1
+          let newList = self.convertDataToUserInfo(data: data)
+          return newList
+        case .failure(_):
+          return []
+        }
+      })
   }
   
   func getShouldShowLoadingCell() -> Bool {
-    return shouldShowLoadingCell
-  }
-  
-  func getUserInfo(at index: Int) -> UserInfo {
-    return userInfos[index]
+    return pagingManager.shouldShowLoadingCell
   }
   
   func refreshList() {
-    self.currentPage = 1
-    self.userInfos = []
+    pagingManager.reset()
+    self.userInfoList.value = []
   }
   
-  func fetchOrg(username: String, indexPath: IndexPath) {
-    if let url = getOrgUrl(username: username) {
-      networkManager.loadData(url: url) { [weak self] (result) in
-        guard let self = self else { return }
-        switch result {
-        case .success(let data):
-          let orgUrls = self.convertDataToOrgUrlString(data: data)
-          self.userInfos[indexPath.row].org_urls = orgUrls
-          self.delegate?.orgFetchCompleted(indexPath: indexPath)
-        case .failure(let error):
-          print(error.localizedDescription)
-        }
-      }
-    }
-  }
-  
-  func fetchUsers(query: String) {
-    if let url = getSearchUrl(query: query, page: currentPage) {
+  func fetchOrgUrls(username: String, index: Int) -> Observable<[String]> {
+    if let finalUrl = getOrgUrl(username: username) {
       
-      networkManager.loadPagedData(url: url) { [weak self] result in
-        guard let self = self else { return }
-        switch result {
-        case .success(let pagedResponse):
-          if self.lastPage == 0 {
-            self.lastPage = pagedResponse.0
+      return networkManager.loadData(finalUrl: finalUrl)
+        .map { [weak self] result in
+          guard let self = self else { return [] }
+          switch result {
+          case .success(let data):
+            let orgUrls = self.convertDataToOrgUrlString(data: data)
+            return orgUrls
+          case .failure(_):
+            return []
           }
-          let data = pagedResponse.1
-          let pagedUserInfos = self.convertDataToUserInfo(data: data)
-          self.userInfos += pagedUserInfos
-          self.shouldShowLoadingCell = self.currentPage < self.lastPage
-          self.delegate?.userFetchCompleted()
-          
-        case .failure(let error):
-          print(error.localizedDescription)
         }
-      }
-      
     }
+    return Observable.empty()
   }
   
   func fetchNextPage(query: String) {
-    currentPage += 1
-    fetchUsers(query: query)
+    
+    pagingManager.nextPage()
+    if let finalUrl = getSearchUrl(query: query, page: pagingManager.getCurrentPage()) {
+      fetchUserList(finalUrl: finalUrl)
+        .do(onNext: { [unowned self] newList in
+          self.userInfoList.value += newList
+        })
+        .subscribe()
+        .disposed(by: bag)
+    }
   }
   
   private func convertDataToUserInfo(data: Data) -> [UserInfo] {
@@ -137,3 +150,6 @@ class ViewModel {
     return url
   }
 }
+
+
+

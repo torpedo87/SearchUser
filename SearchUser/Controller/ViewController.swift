@@ -7,15 +7,18 @@
 //
 
 import UIKit
+import RxSwift
+import RxCocoa
 
 class ViewController: UIViewController {
+  
   var viewModel: ViewModel!
+  private let bag = DisposeBag()
   private lazy var searchController: UISearchController = {
     let controller = UISearchController(searchResultsController: nil)
     controller.obscuresBackgroundDuringPresentation = false
     controller.searchBar.placeholder = "Please enter keywords"
     definesPresentationContext = true
-    controller.searchResultsUpdater = self
     return controller
   }()
   
@@ -25,8 +28,6 @@ class ViewController: UIViewController {
     tableView.register(UserListCell.self,
                   forCellReuseIdentifier: UserListCell.reuseIdentifier)
     tableView.backgroundColor = UIColor.clear
-    tableView.delegate = self
-    tableView.dataSource = self
     tableView.estimatedRowHeight = 44
     tableView.rowHeight = UITableView.automaticDimension
     return tableView
@@ -37,85 +38,82 @@ class ViewController: UIViewController {
     view.backgroundColor = .white
     navigationItem.searchController = searchController
     view.addSubview(tableView)
-    viewModel.delegate = self
     
-    tableView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor).isActive = true
-    tableView.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor).isActive = true
-    tableView.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor).isActive = true
-    tableView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor).isActive = true
+    NSLayoutConstraint.activate([
+      tableView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+      tableView.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor),
+      tableView.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor),
+      tableView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor)
+    ])
+    
+    bind()
+    bindTableView()
   }
   
-  func searchBarIsEmpty() -> Bool {
-    return searchController.searchBar.text?.isEmpty ?? true
-  }
-}
-
-extension ViewController: UITableViewDataSource {
-  
-  func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-    let totalCount = viewModel.totalCount()
-    return viewModel.getShouldShowLoadingCell() ? totalCount + 1 : totalCount
+  func bind() {
+    
+    //검색어 전달
+    searchController.searchBar.rx.text.orEmpty
+      .asObservable()
+      .debounce(0.5, scheduler: MainScheduler.instance)
+      .bind(to: viewModel.searchInput)
+      .disposed(by: bag)
   }
   
-  func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-    if isLoadingIndexPath(indexPath) {
-      return LoadingCell(style: .default, reuseIdentifier: "LoadingCell")
-    } else {
-      if let cell = tableView.dequeueReusableCell(withIdentifier: UserListCell.reuseIdentifier,
-                                                  for: indexPath) as? UserListCell {
-        let userInfo = viewModel.getUserInfo(at: indexPath.row)
-        cell.configure(userInfo: userInfo, indexPath: indexPath)
-        cell.delegate = self
-        return cell
+  func bindTableView() {
+    
+    //결과값 받아서 테이블에 뿌리기
+    viewModel.userInfoList
+      .asObservable()
+      .observeOn(MainScheduler.instance)
+      .subscribe(onNext: { [weak self] _ in
+        guard let self = self else { return }
+        self.tableView.reloadData()
+      })
+      .disposed(by: bag)
+    
+    viewModel.userInfoList
+      .asObservable()
+      .bind(to: tableView.rx.items) {
+        (tableView: UITableView, index: Int, element: UserInfo) in
+        if let cell = tableView.dequeueReusableCell(withIdentifier: UserListCell.reuseIdentifier) as? UserListCell {
+          cell.configure(userInfo: element, index: index)
+          cell.delegate = self
+          return cell
+        }
+        return UserListCell()
       }
-      return UITableViewCell()
-    }
+      .disposed(by: bag)
+    
+    //스크롤해서 하단에 도착하는 경우 다음 페이지 요청
+    tableView.rx.willDisplayCell
+      .subscribe(onNext: { [unowned self] cell, indexPath in
+        guard self.isLoadingIndexPath(indexPath) else { return }
+        guard !self.searchBarIsEmpty() else { return }
+        self.viewModel.fetchNextPage(query: self.searchController.searchBar.text!)
+      })
+      .disposed(by: bag)
+  }
+  
+  private func searchBarIsEmpty() -> Bool {
+    return searchController.searchBar.text?.isEmpty ?? true
   }
   
   private func isLoadingIndexPath(_ indexPath: IndexPath) -> Bool {
     guard viewModel.getShouldShowLoadingCell() else { return false }
-    return indexPath.row == viewModel.totalCount()
-  }
-}
-
-extension ViewController: UITableViewDelegate {
-  
-  func tableView(_ tableView: UITableView, willDisplay cell: UITableViewCell, forRowAt indexPath: IndexPath) {
-    guard isLoadingIndexPath(indexPath) else { return }
-    guard !searchBarIsEmpty() else { return }
-    viewModel.fetchNextPage(query: searchController.searchBar.text!)
-  }
-}
-
-extension ViewController: UISearchResultsUpdating {
-  
-  func updateSearchResults(for searchController: UISearchController) {
-    
-    guard !searchBarIsEmpty() else { return }
-    viewModel.refreshList()
-    viewModel.fetchUsers(query: searchController.searchBar.text!)
-  }
-}
-
-extension ViewController: ViewModelDelegate {
-  func orgFetchCompleted(indexPath: IndexPath) {
-    DispatchQueue.main.async {
-      self.tableView.reloadRows(at: [indexPath], with: .automatic)
-      if let cell = self.tableView.cellForRow(at: indexPath) as? UserListCell {
-        cell.toggleBottomView()
-      }
-    }
-  }
-  
-  func userFetchCompleted() {
-    DispatchQueue.main.async {
-      self.tableView.reloadData()
-    }
+    return indexPath.row == viewModel.userInfoList.value.count
   }
 }
 
 extension ViewController: UserListCellDelegate {
-  func requestOrgUrls(username: String, indexPath: IndexPath) {
-    viewModel.fetchOrg(username: username, indexPath: indexPath)
+  
+  //셀 클릭이벤트 받아서 뷰모델에 요청한 후 받은 결과를 다시 셀에 전달
+  func requestOrgUrls(username: String, index: Int) {
+    let indexPath = IndexPath(row: index, section: 0)
+    if let cell = tableView.cellForRow(at: indexPath) as? UserListCell {
+      viewModel.fetchOrgUrls(username: username, index: index)
+        .bind(to: cell.org_Urls)
+        .disposed(by: bag)
+    }
   }
 }

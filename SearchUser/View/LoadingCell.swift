@@ -29,10 +29,12 @@ class LoadingCell: UITableViewCell {
   
   func setupUI() {
     contentView.addSubview(indicatorView)
-    indicatorView.widthAnchor.constraint(equalToConstant: 30).isActive = true
-    indicatorView.heightAnchor.constraint(equalToConstant: 30).isActive = true
-    indicatorView.centerXAnchor.constraint(equalTo: contentView.centerXAnchor).isActive = true
-    indicatorView.centerYAnchor.constraint(equalTo: contentView.centerYAnchor).isActive = true
+    NSLayoutConstraint.activate([
+      indicatorView.widthAnchor.constraint(equalToConstant: 30),
+      indicatorView.heightAnchor.constraint(equalToConstant: 30),
+      indicatorView.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
+      indicatorView.centerYAnchor.constraint(equalTo: contentView.centerYAnchor)
+    ])
     
     indicatorView.startAnimating()
   }

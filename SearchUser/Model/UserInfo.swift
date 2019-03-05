@@ -28,6 +28,5 @@ extension UserInfo {
     self.avatar_url = avatarUrl
     self.score = userScore
     self.login = username
-    
   }
 }

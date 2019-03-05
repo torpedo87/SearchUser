@@ -7,14 +7,16 @@
 //
 
 import UIKit
+import RxSwift
 
 protocol UserListCellDelegate: class {
-  func requestOrgUrls(username: String, indexPath: IndexPath)
+  func requestOrgUrls(username: String, index: Int)
 }
 
 class UserListCell: UITableViewCell {
+  private let bag = DisposeBag()
   static let reuseIdentifier: String = "UserListCell"
-  private var indexPath: IndexPath?
+  private var row: Int?
   private var orgImgViews = [UIImageView]()
   weak var delegate: UserListCellDelegate?
   
@@ -67,6 +69,55 @@ class UserListCell: UITableViewCell {
     label.textColor = UIColor.gray
     return label
   }()
+  var org_Urls = PublishSubject<[String]>()
+  
+  func configure(userInfo: UserInfo, index: Int) {
+    selectionStyle = .none
+    self.row = index
+    imgView.loadImageWithUrlString(urlString: userInfo.avatar_url)
+    usernameLabel.text = userInfo.login
+    scoreLabel.text = "score : \(userInfo.score)"
+    setupView()
+    addTapGesture()
+    bind()
+  }
+  
+  private func bind() {
+    org_Urls
+      .asDriver(onErrorJustReturn: [])
+      .drive(onNext: { [unowned self] urls in
+        self.configureOrgImgViews(orgImgUrls: urls)
+        self.toggleBottomView()
+      })
+      .disposed(by: bag)
+  }
+  
+  private func setupView() {
+    addSubview(outerStackView)
+    outerStackView.addArrangedSubview(topView)
+    outerStackView.addArrangedSubview(bottomView)
+    topView.addSubview(imgView)
+    topView.addSubview(labelStackView)
+    labelStackView.addArrangedSubview(usernameLabel)
+    labelStackView.addArrangedSubview(scoreLabel)
+    
+    let edgeInset: CGFloat = 25
+    NSLayoutConstraint.activate([
+      outerStackView.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor, constant: edgeInset),
+      outerStackView.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor, constant: edgeInset),
+      outerStackView.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor, constant: -edgeInset),
+      outerStackView.bottomAnchor.constraint(equalTo: safeAreaLayoutGuide.bottomAnchor, constant: -edgeInset),
+      imgView.widthAnchor.constraint(equalToConstant: 50),
+      imgView.heightAnchor.constraint(equalToConstant: 50),
+      imgView.leadingAnchor.constraint(equalTo: topView.leadingAnchor),
+      imgView.topAnchor.constraint(equalTo: topView.topAnchor),
+      imgView.bottomAnchor.constraint(equalTo: topView.bottomAnchor),
+      labelStackView.leadingAnchor.constraint(equalTo: imgView.trailingAnchor, constant: 5),
+      labelStackView.topAnchor.constraint(equalTo: topView.topAnchor),
+      labelStackView.trailingAnchor.constraint(equalTo: topView.trailingAnchor),
+      labelStackView.bottomAnchor.constraint(equalTo: topView.bottomAnchor)
+    ])
+  }
   
   private func configureOrgImgViews(orgImgUrls: [String]) {
     
@@ -102,52 +153,14 @@ class UserListCell: UITableViewCell {
     }
   }
   
-  func configure(userInfo: UserInfo, indexPath: IndexPath) {
-    selectionStyle = .none
-    self.indexPath = indexPath
-    imgView.loadImageWithUrlString(urlString: userInfo.avatar_url)
-    usernameLabel.text = userInfo.login
-    scoreLabel.text = "score : \(userInfo.score)"
-    
-    addSubview(outerStackView)
-    outerStackView.addArrangedSubview(topView)
-    outerStackView.addArrangedSubview(bottomView)
-    topView.addSubview(imgView)
-    topView.addSubview(labelStackView)
-    labelStackView.addArrangedSubview(usernameLabel)
-    labelStackView.addArrangedSubview(scoreLabel)
-    
-    let edgeInset: CGFloat = 25
-    outerStackView.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor, constant: edgeInset).isActive = true
-    outerStackView.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor, constant: edgeInset).isActive = true
-    outerStackView.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor, constant: -edgeInset).isActive = true
-    outerStackView.bottomAnchor.constraint(equalTo: safeAreaLayoutGuide.bottomAnchor, constant: -edgeInset).isActive = true
-    
-    imgView.widthAnchor.constraint(equalToConstant: 50).isActive = true
-    imgView.heightAnchor.constraint(equalToConstant: 50).isActive = true
-    imgView.leadingAnchor.constraint(equalTo: topView.leadingAnchor).isActive = true
-    imgView.topAnchor.constraint(equalTo: topView.topAnchor).isActive = true
-    imgView.bottomAnchor.constraint(equalTo: topView.bottomAnchor).isActive = true
-    
-    labelStackView.leadingAnchor.constraint(equalTo: imgView.trailingAnchor, constant: 5).isActive = true
-    labelStackView.topAnchor.constraint(equalTo: topView.topAnchor).isActive = true
-    labelStackView.trailingAnchor.constraint(equalTo: topView.trailingAnchor).isActive = true
-    labelStackView.bottomAnchor.constraint(equalTo: topView.bottomAnchor).isActive = true
-    
-    let orgUrls = userInfo.org_urls
-    if orgUrls.count != 0 {
-      self.configureOrgImgViews(orgImgUrls: orgUrls)
-    }
-    addTapGesture()
-  }
-  
   private func addTapGesture() {
-    let tap = UITapGestureRecognizer(target: self, action: #selector(imgViewOrUsernameTapped(recognizer:)))
+    let tap = UITapGestureRecognizer(target: self,
+                                     action: #selector(imgViewOrUsernameTapped(recognizer:)))
     imgView.addGestureRecognizer(tap)
     usernameLabel.addGestureRecognizer(tap)
   }
   
-  func toggleBottomView() {
+  private func toggleBottomView() {
     bottomView.isHidden = !bottomView.isHidden
   }
   
@@ -160,8 +173,8 @@ class UserListCell: UITableViewCell {
   }
   
   @objc func imgViewOrUsernameTapped(recognizer: UITapGestureRecognizer) {
-    guard let indexPath = self.indexPath else { return }
+    guard let index = self.row else { return }
     guard let username = self.usernameLabel.text else { return }
-    delegate?.requestOrgUrls(username: username, indexPath: indexPath)
+    delegate?.requestOrgUrls(username: username, index: index)
   }
 }

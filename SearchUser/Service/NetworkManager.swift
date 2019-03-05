@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import RxSwift
 
 typealias PagedResponse = (Int, Data)
 
@@ -34,70 +35,69 @@ enum LoadingError: Error {
 class NetworkManager {
   
   private let session: URLSession
-  var gotLastPage: Bool = false
   init(session: URLSession = .shared) {
     self.session = session
   }
   
-  func loadPagedData(url: URL,
-                comopletionHandler: @escaping (Result<PagedResponse, LoadingError>) -> Void) {
-    
-    let task = session.dataTask(with: url) { [weak self] (data, response, error) in
-      guard let self = self else { return }
-      if let _ = error {
-        comopletionHandler(.failure(.client))
-        return
-      }
-      
-      if let httpResponse = response as? HTTPURLResponse {
-        if !self.gotLastPage {
-          if let link = httpResponse.allHeaderFields["Link"] as? String {
-            let lastPage = (self.getLastPageFromLinkHeader(link: link))
-            self.gotLastPage = true
-            if let data = data {
-              let pagedResponse = (lastPage, data)
-              comopletionHandler(.success(pagedResponse))
-            }
-          }
-        } else {
-          if let data = data {
-            let pagedResponse = (-1, data)
-            comopletionHandler(.success(pagedResponse))
-          }
-        }
-        
-        if !(200...299).contains(httpResponse.statusCode) {
-          comopletionHandler(.failure(.server))
-          return
-        }
-      }
-      
+  func loadData(finalUrl: URL) -> Observable<Result<Data, LoadingError>> {
+
+    let request: Observable<URLRequest> = Observable.create{ observer in
+      let request: URLRequest = {
+        var request = URLRequest(url: $0)
+        request.httpMethod = "GET"
+        return request
+      }(finalUrl)
+      observer.onNext(request)
+      observer.onCompleted()
+      return Disposables.create()
     }
-    task.resume()
+
+    return request.flatMap{
+      URLSession.shared.rx.response(request: $0)
+      }
+      .map({ (response, data) -> Result<Data, LoadingError> in
+        if 200 ..< 300 ~= response.statusCode {
+          return Result.success(data)
+        } else {
+          return Result.failure(LoadingError.client)
+        }
+      })
+      .catchError({ _ -> Observable<Result<Data, LoadingError>> in
+        return Observable.just(Result.failure(LoadingError.server))
+      })
   }
   
-  func loadData(url: URL,
-                    comopletionHandler: @escaping (Result<Data, LoadingError>) -> Void) {
+  func loadPagedData(finalUrl: URL) -> Observable<Result<PagedResponse, LoadingError>> {
     
-    let task = session.dataTask(with: url) { (data, response, error) in
-      if let _ = error {
-        comopletionHandler(.failure(.client))
-        return
-      }
-      
-      if let httpResponse = response as? HTTPURLResponse {
-        if let data = data {
-          comopletionHandler(.success(data))
-        }
-        
-        if !(200...299).contains(httpResponse.statusCode) {
-          comopletionHandler(.failure(.server))
-          return
-        }
-      }
-      
+    let request: Observable<URLRequest> = Observable.create{ observer in
+      let request: URLRequest = {
+        var request = URLRequest(url: $0)
+        request.httpMethod = "GET"
+        return request
+      }(finalUrl)
+      observer.onNext(request)
+      observer.onCompleted()
+      return Disposables.create()
     }
-    task.resume()
+    
+    return request.flatMap{
+      URLSession.shared.rx.response(request: $0)
+      }
+      .map({ [unowned self] (response, data) -> Result<PagedResponse, LoadingError> in
+        if 200 ..< 300 ~= response.statusCode {
+          if let link = response.allHeaderFields["Link"] as? String {
+            let lastPage = self.getLastPageFromLinkHeader(link: link)
+            let pagedResponse = (lastPage, data)
+            return Result.success(pagedResponse)
+          }
+          return Result.success((0, data))
+        } else {
+          return Result.failure(LoadingError.client)
+        }
+      })
+      .catchError({ _ -> Observable<Result<PagedResponse, LoadingError>> in
+        return Observable.just(Result.failure(LoadingError.server))
+      })
   }
   
   private func getLastPageFromLinkHeader(link: String) -> Int {
