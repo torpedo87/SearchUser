@@ -86,7 +86,7 @@ class NetworkManager {
       .map({ [unowned self] (response, data) -> Result<PagedResponse, LoadingError> in
         if 200 ..< 300 ~= response.statusCode {
           if let link = response.allHeaderFields["Link"] as? String {
-            let lastPage = self.getLastPageFromLinkHeader(link: link)
+            let lastPage = self.getLastPage(link: link)
             let pagedResponse = (lastPage, data)
             return Result.success(pagedResponse)
           }
@@ -100,9 +100,15 @@ class NetworkManager {
       })
   }
   
-  private func getLastPageFromLinkHeader(link: String) -> Int {
-    let strWithLastPage = link.components(separatedBy: "=")[4]
-    let lastPage = strWithLastPage.components(separatedBy: "&")[0]
-    return Int(lastPage) ?? 0
+  private func getLastPage(link: String) -> Int {
+    guard link.contains("last") else { return 0 }
+    let last = link.trimmingCharacters(in: .whitespaces)
+      .components(separatedBy: ",")
+      .filter { $0.contains("last") }.first!
+      .filter { char in
+        CharacterSet.decimalDigits
+          .contains(Unicode.Scalar(String(char))!)
+      }
+    return Int(last) ?? 0
   }
 }

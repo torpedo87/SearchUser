@@ -16,6 +16,7 @@ class ViewModel {
   private var pagingManager: PagingManager!
   let userInfoList = Variable<[UserInfo]>([])
   private let bag = DisposeBag()
+  private let globalScheduler = ConcurrentDispatchQueueScheduler(queue: DispatchQueue.global())
   
   init(networkManager: NetworkManager, pagingManager: PagingManager) {
     self.networkManager = networkManager
@@ -35,9 +36,9 @@ class ViewModel {
         return self.getSearchUrl(query: query, page: page)
       }
       .filter{ $0 != nil }
+      .subscribeOn(globalScheduler)
       .flatMap({ [unowned self] finalUrl -> Observable<[UserInfo]> in
-        guard let url = finalUrl else { return Observable.empty() }
-        return self.fetchUserList(finalUrl: url)
+        return self.fetchUserList(finalUrl: finalUrl!)
       })
       .map({ newList in
         if pagingManager.getCurrentPage() == 0 {
@@ -52,6 +53,7 @@ class ViewModel {
     //스크롤이 밑바닥에 도달하고 다음 페이지가 있으면 다음 페이지로
     Observable.combineLatest(reachToBottom.asObservable(),
                              pagingManager.hasNext.asObservable())
+      .debug("----")
       .filter{ $0.0 && $0.1 }
       .subscribe(onNext: { [unowned self] _ in
         self.pagingManager.nextPage()

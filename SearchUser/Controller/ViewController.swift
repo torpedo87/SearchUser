@@ -28,7 +28,7 @@ class ViewController: UIViewController {
     tableView.register(UserListCell.self,
                   forCellReuseIdentifier: UserListCell.reuseIdentifier)
     tableView.backgroundColor = UIColor.clear
-    tableView.estimatedRowHeight = 44
+    tableView.estimatedRowHeight = 200
     tableView.rowHeight = UITableView.automaticDimension
     return tableView
   }()
@@ -85,26 +85,23 @@ class ViewController: UIViewController {
       }
       .disposed(by: bag)
     
-    //스크롤해서 하단에 도착하는 경우 다음 페이지 요청
+    //스크롤이벤트를 전달
     tableView.rx.willDisplayCell
-      .filter { _ in
-        return !self.searchBarIsEmpty()
-      }
       .map { return self.isLoadingIndexPath($0.indexPath) }
       .bind(to: viewModel.reachToBottom)
       .disposed(by: bag)
   }
   
-  private func searchBarIsEmpty() -> Bool {
-    return searchController.searchBar.text?.isEmpty ?? true
-  }
-  
   private func isLoadingIndexPath(_ indexPath: IndexPath) -> Bool {
-    return indexPath.row == viewModel.userInfoList.value.count
+    return indexPath.row == viewModel.userInfoList.value.count - 1
   }
 }
 
 extension ViewController: UserListCellDelegate {
+  func requestUpdateTableView() {
+    tableView.beginUpdates()
+    tableView.endUpdates()
+  }
   
   //셀 클릭이벤트 받아서 뷰모델에 요청한 후 받은 결과를 다시 셀에 전달
   func requestOrgUrls(username: String, index: Int) {

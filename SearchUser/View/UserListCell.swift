@@ -11,9 +11,12 @@ import RxSwift
 
 protocol UserListCellDelegate: class {
   func requestOrgUrls(username: String, index: Int)
+  func requestUpdateTableView()
 }
 
 class UserListCell: UITableViewCell {
+  var isFetched = false
+  var isExpanded = false
   private let bag = DisposeBag()
   static let reuseIdentifier: String = "UserListCell"
   private var row: Int?
@@ -25,7 +28,7 @@ class UserListCell: UITableViewCell {
     stackView.axis = .vertical
     stackView.translatesAutoresizingMaskIntoConstraints = false
     stackView.spacing = 3
-    stackView.distribution = .fillProportionally
+    stackView.distribution = .fill
     return stackView
   }()
   private lazy var topView: UIView = {
@@ -37,6 +40,7 @@ class UserListCell: UITableViewCell {
     let view = UIView()
     view.translatesAutoresizingMaskIntoConstraints = false
     view.isHidden = true
+    view.backgroundColor = UIColor.yellow
     return view
   }()
   private lazy var imgView: UIImageView = {
@@ -51,7 +55,7 @@ class UserListCell: UITableViewCell {
     stackView.axis = .vertical
     stackView.translatesAutoresizingMaskIntoConstraints = false
     stackView.spacing = 3
-    stackView.distribution = .fillProportionally
+    stackView.distribution = .fill
     return stackView
   }()
   private lazy var usernameLabel: UILabel = {
@@ -77,19 +81,25 @@ class UserListCell: UITableViewCell {
     imgView.loadImageWithUrlString(urlString: userInfo.avatar_url)
     usernameLabel.text = userInfo.login
     scoreLabel.text = "score : \(userInfo.score)"
+    
     setupView()
     addTapGesture()
     bind()
   }
   
   private func bind() {
+    
     org_Urls
       .asDriver(onErrorJustReturn: [])
+      .do(onNext: { _ in
+        self.isFetched = true
+      })
       .drive(onNext: { [unowned self] urls in
-        self.configureOrgImgViews(orgImgUrls: urls)
-        self.toggleBottomView()
+        self.setupOrgImgViews(orgImgUrls: urls)
+        self.delegate?.requestUpdateTableView()
       })
       .disposed(by: bag)
+    
   }
   
   private func setupView() {
@@ -116,10 +126,13 @@ class UserListCell: UITableViewCell {
       labelStackView.topAnchor.constraint(equalTo: topView.topAnchor),
       labelStackView.trailingAnchor.constraint(equalTo: topView.trailingAnchor),
       labelStackView.bottomAnchor.constraint(equalTo: topView.bottomAnchor),
+      bottomView.heightAnchor.constraint(equalToConstant: 40),
+      bottomView.widthAnchor.constraint(equalTo: topView.widthAnchor)
     ])
+    
   }
   
-  private func configureOrgImgViews(orgImgUrls: [String]) {
+  private func setupOrgImgViews(orgImgUrls: [String]) {
     
     orgImgUrls.forEach { urlString in
       let orgImgView = UIImageView()
@@ -160,10 +173,6 @@ class UserListCell: UITableViewCell {
     usernameLabel.addGestureRecognizer(tap)
   }
   
-  private func toggleBottomView() {
-    bottomView.isHidden = !bottomView.isHidden
-  }
-  
   override func prepareForReuse() {
     super.prepareForReuse()
     usernameLabel.text = nil
@@ -173,8 +182,13 @@ class UserListCell: UITableViewCell {
   }
   
   @objc func imgViewOrUsernameTapped(recognizer: UITapGestureRecognizer) {
-    guard let index = self.row else { return }
-    guard let username = self.usernameLabel.text else { return }
-    self.delegate?.requestOrgUrls(username: username, index: index)
+    bottomView.isHidden = !bottomView.isHidden
+    if isFetched {
+      delegate?.requestUpdateTableView()
+    } else {
+      guard let index = self.row else { return }
+      guard let username = self.usernameLabel.text else { return }
+      self.delegate?.requestOrgUrls(username: username, index: index)
+    }
   }
 }

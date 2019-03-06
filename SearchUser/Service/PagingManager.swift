@@ -15,14 +15,17 @@ class PagingManager {
   private var lastPage = 0
   var hasNext = PublishSubject<Bool>()
   var current = PublishSubject<Int>()
+  var last = PublishSubject<Int>()
   
   init() {
-    current.asObservable()
-      .map { [unowned self] page -> Bool in
-        return page < self.lastPage
+    Observable.combineLatest(current.asObservable(), last.asObservable())
+      .map { current, last -> Bool in
+        return current < last
       }
       .bind(to: hasNext)
       .disposed(by: bag)
+    
+    current.onNext(1)
   }
   
   func nextPage() {
@@ -36,6 +39,7 @@ class PagingManager {
   
   func setLastPage(last: Int) {
     self.lastPage = last
+    self.last.onNext(last)
   }
   
   func getCurrentPage() -> Int {
