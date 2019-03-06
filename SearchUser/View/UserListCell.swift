@@ -40,7 +40,6 @@ class UserListCell: UITableViewCell {
     let view = UIView()
     view.translatesAutoresizingMaskIntoConstraints = false
     view.isHidden = true
-    view.backgroundColor = UIColor.yellow
     return view
   }()
   private lazy var imgView: UIImageView = {
@@ -152,6 +151,7 @@ class UserListCell: UITableViewCell {
     
     orgImgUrls.forEach { urlString in
       let orgImgView = UIImageView()
+      orgImgView.translatesAutoresizingMaskIntoConstraints = false
       orgImgView.widthAnchor.constraint(equalToConstant: 40).isActive = true
       orgImgView.heightAnchor.constraint(equalToConstant: 40).isActive = true
       orgImgView.contentMode = .scaleAspectFit
