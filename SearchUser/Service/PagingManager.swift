@@ -29,8 +29,13 @@ class PagingManager {
   }
   
   func nextPage() {
+    print("fetching \(currentPage) / \(lastPage)")
     currentPage += 1
     current.onNext(currentPage)
+  }
+  
+  var shouldLoading: Bool {
+    return currentPage < lastPage
   }
   
   var isSetLastPage: Bool {

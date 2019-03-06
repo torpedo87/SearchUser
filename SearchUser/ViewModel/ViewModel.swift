@@ -8,13 +8,14 @@
 
 import Foundation
 import RxSwift
+import RxCocoa
 
 class ViewModel {
   var searchInput = PublishSubject<String>()
   var reachToBottom = PublishSubject<Bool>()
   private var networkManager: NetworkManager!
   private var pagingManager: PagingManager!
-  let userInfoList = Variable<[UserInfo]>([])
+  let userInfoList = BehaviorRelay<[UserInfo]>(value: [])
   private let bag = DisposeBag()
   private let globalScheduler = ConcurrentDispatchQueueScheduler(queue: DispatchQueue.global())
   
@@ -41,7 +42,7 @@ class ViewModel {
         return self.fetchUserList(finalUrl: finalUrl!)
       })
       .map({ newList in
-        if pagingManager.getCurrentPage() == 0 {
+        if pagingManager.getCurrentPage() == 1 {
           return newList
         } else {
           return self.userInfoList.value + newList
@@ -51,10 +52,8 @@ class ViewModel {
       .disposed(by: bag)
     
     //스크롤이 밑바닥에 도달하고 다음 페이지가 있으면 다음 페이지로
-    Observable.combineLatest(reachToBottom.asObservable(),
-                             pagingManager.hasNext.asObservable())
-      .debug("----")
-      .filter{ $0.0 && $0.1 }
+    reachToBottom.asObservable()
+      .filter{ $0 && pagingManager.shouldLoading }
       .subscribe(onNext: { [unowned self] _ in
         self.pagingManager.nextPage()
       })
@@ -66,6 +65,7 @@ class ViewModel {
       .do(onNext: { [unowned self] result in
         switch result {
         case .success(let pagedResponse):
+          //lastpage 한번 가져오기
           if !self.pagingManager.isSetLastPage {
             self.pagingManager.setLastPage(last: pagedResponse.0)
           }
