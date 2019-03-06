@@ -106,7 +106,6 @@ class UserListCell: UITableViewCell {
       .do(onNext: { _ in
         self.isFetched = true
       })
-      .debug("org---")
       .drive(onNext: { [unowned self] urls in
         self.setupOrgImgViews(orgImgUrls: urls)
         self.delegate?.requestUpdateTableView()

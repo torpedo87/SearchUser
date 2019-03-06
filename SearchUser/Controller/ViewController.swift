@@ -32,12 +32,18 @@ class ViewController: UIViewController {
     tableView.rowHeight = UITableView.automaticDimension
     return tableView
   }()
+  private lazy var activityIndicator: UIActivityIndicatorView = {
+    let spinner = UIActivityIndicatorView()
+    spinner.color = UIColor.blue
+    return spinner
+  }()
   
   override func viewDidLoad() {
     super.viewDidLoad()
     view.backgroundColor = .white
     navigationItem.searchController = searchController
     view.addSubview(tableView)
+    tableView.tableFooterView = activityIndicator
     
     NSLayoutConstraint.activate([
       tableView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
@@ -88,7 +94,19 @@ class ViewController: UIViewController {
     //스크롤이벤트를 전달
     tableView.rx.willDisplayCell
       .map { return self.isLoadingIndexPath($0.indexPath) }
+      .filter{ $0 }
       .bind(to: viewModel.reachToBottom)
+      .disposed(by: bag)
+    
+    let hasNext = viewModel.hasNext.share()
+    
+    hasNext
+      .bind(to: activityIndicator.rx.isAnimating)
+      .disposed(by: bag)
+    
+    hasNext
+      .map{ return !$0 }
+      .bind(to: activityIndicator.rx.isHidden)
       .disposed(by: bag)
   }
   

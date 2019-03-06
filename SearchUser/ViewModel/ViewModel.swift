@@ -13,6 +13,7 @@ import RxCocoa
 class ViewModel {
   var searchInput = PublishSubject<String>()
   var reachToBottom = PublishSubject<Bool>()
+  var hasNext = PublishSubject<Bool>()
   private var networkManager: NetworkManager!
   private var pagingManager: PagingManager!
   let userInfoList = BehaviorRelay<[UserInfo]>(value: [])
@@ -54,6 +55,10 @@ class ViewModel {
     //스크롤이 밑바닥에 도달하고 다음 페이지가 있으면 다음 페이지로
     reachToBottom.asObservable()
       .filter{ $0 && pagingManager.shouldLoading }
+      .bind(to: hasNext)
+      .disposed(by: bag)
+    
+    hasNext.asObservable()
       .subscribe(onNext: { [unowned self] _ in
         self.pagingManager.nextPage()
       })
