@@ -10,19 +10,28 @@ import Foundation
 import RxSwift
 
 class PagingManager {
+  private let bag = DisposeBag()
   private var currentPage = 1
   private var lastPage = 0
+  var hasNext = PublishSubject<Bool>()
+  var current = PublishSubject<Int>()
+  
+  init() {
+    current.asObservable()
+      .map { [unowned self] page -> Bool in
+        return page < self.lastPage
+      }
+      .bind(to: hasNext)
+      .disposed(by: bag)
+  }
   
   func nextPage() {
     currentPage += 1
+    current.onNext(currentPage)
   }
   
   var isSetLastPage: Bool {
     return lastPage != 0
-  }
-  
-  var shouldShowLoadingCell: Bool {
-    return self.currentPage < self.lastPage
   }
   
   func setLastPage(last: Int) {
@@ -31,11 +40,6 @@ class PagingManager {
   
   func getCurrentPage() -> Int {
     return self.currentPage
-  }
-  
-  func reset() {
-    self.currentPage = 1
-    self.lastPage = 0
   }
 }
 

@@ -11,6 +11,7 @@ import RxSwift
 
 class ViewModel {
   var searchInput = PublishSubject<String>()
+  var reachToBottom = PublishSubject<Bool>()
   private var networkManager: NetworkManager!
   private var pagingManager: PagingManager!
   let userInfoList = Variable<[UserInfo]>([])
@@ -20,19 +21,41 @@ class ViewModel {
     self.networkManager = networkManager
     self.pagingManager = pagingManager
     
+    //검색어 변경시 페이지 리셋
     searchInput.asObservable()
-      .do(onNext: { [unowned self] _ in
-        self.refreshList()
+      .subscribe(onNext: { _ in
+        pagingManager.current.onNext(1)
       })
-      .map({ [unowned self] query -> URL? in
-        return self.getSearchUrl(query: query, page: self.pagingManager.getCurrentPage())
-      })
+      .disposed(by: bag)
+    
+    //검색어와 페이지를 통해 url 요청해서 유저 정보 가져오기
+    Observable.combineLatest(searchInput.asObservable(),
+                             pagingManager.current.asObservable())
+      .map { [unowned self] query, page -> URL? in
+        return self.getSearchUrl(query: query, page: page)
+      }
       .filter{ $0 != nil }
       .flatMap({ [unowned self] finalUrl -> Observable<[UserInfo]> in
         guard let url = finalUrl else { return Observable.empty() }
         return self.fetchUserList(finalUrl: url)
       })
+      .map({ newList in
+        if pagingManager.getCurrentPage() == 0 {
+          return newList
+        } else {
+          return self.userInfoList.value + newList
+        }
+      })
       .bind(to: userInfoList)
+      .disposed(by: bag)
+    
+    //스크롤이 밑바닥에 도달하고 다음 페이지가 있으면 다음 페이지로
+    Observable.combineLatest(reachToBottom.asObservable(),
+                             pagingManager.hasNext.asObservable())
+      .filter{ $0.0 && $0.1 }
+      .subscribe(onNext: { [unowned self] _ in
+        self.pagingManager.nextPage()
+      })
       .disposed(by: bag)
   }
   
@@ -60,15 +83,6 @@ class ViewModel {
       })
   }
   
-  func getShouldShowLoadingCell() -> Bool {
-    return pagingManager.shouldShowLoadingCell
-  }
-  
-  func refreshList() {
-    pagingManager.reset()
-    self.userInfoList.value = []
-  }
-  
   func fetchOrgUrls(username: String, index: Int) -> Observable<[String]> {
     if let finalUrl = getOrgUrl(username: username) {
       
@@ -85,19 +99,6 @@ class ViewModel {
         }
     }
     return Observable.empty()
-  }
-  
-  func fetchNextPage(query: String) {
-    
-    pagingManager.nextPage()
-    if let finalUrl = getSearchUrl(query: query, page: pagingManager.getCurrentPage()) {
-      fetchUserList(finalUrl: finalUrl)
-        .do(onNext: { [unowned self] newList in
-          self.userInfoList.value += newList
-        })
-        .subscribe()
-        .disposed(by: bag)
-    }
   }
   
   private func convertDataToUserInfo(data: Data) -> [UserInfo] {

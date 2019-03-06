@@ -87,11 +87,11 @@ class ViewController: UIViewController {
     
     //스크롤해서 하단에 도착하는 경우 다음 페이지 요청
     tableView.rx.willDisplayCell
-      .subscribe(onNext: { [unowned self] cell, indexPath in
-        guard self.isLoadingIndexPath(indexPath) else { return }
-        guard !self.searchBarIsEmpty() else { return }
-        self.viewModel.fetchNextPage(query: self.searchController.searchBar.text!)
-      })
+      .filter { _ in
+        return !self.searchBarIsEmpty()
+      }
+      .map { return self.isLoadingIndexPath($0.indexPath) }
+      .bind(to: viewModel.reachToBottom)
       .disposed(by: bag)
   }
   
@@ -100,7 +100,6 @@ class ViewController: UIViewController {
   }
   
   private func isLoadingIndexPath(_ indexPath: IndexPath) -> Bool {
-    guard viewModel.getShouldShowLoadingCell() else { return false }
     return indexPath.row == viewModel.userInfoList.value.count
   }
 }
@@ -110,10 +109,12 @@ extension ViewController: UserListCellDelegate {
   //셀 클릭이벤트 받아서 뷰모델에 요청한 후 받은 결과를 다시 셀에 전달
   func requestOrgUrls(username: String, index: Int) {
     let indexPath = IndexPath(row: index, section: 0)
+    
     if let cell = tableView.cellForRow(at: indexPath) as? UserListCell {
       viewModel.fetchOrgUrls(username: username, index: index)
         .bind(to: cell.org_Urls)
         .disposed(by: bag)
     }
+    
   }
 }

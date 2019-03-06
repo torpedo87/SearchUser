@@ -115,7 +115,7 @@ class UserListCell: UITableViewCell {
       labelStackView.leadingAnchor.constraint(equalTo: imgView.trailingAnchor, constant: 5),
       labelStackView.topAnchor.constraint(equalTo: topView.topAnchor),
       labelStackView.trailingAnchor.constraint(equalTo: topView.trailingAnchor),
-      labelStackView.bottomAnchor.constraint(equalTo: topView.bottomAnchor)
+      labelStackView.bottomAnchor.constraint(equalTo: topView.bottomAnchor),
     ])
   }
   
@@ -175,6 +175,6 @@ class UserListCell: UITableViewCell {
   @objc func imgViewOrUsernameTapped(recognizer: UITapGestureRecognizer) {
     guard let index = self.row else { return }
     guard let username = self.usernameLabel.text else { return }
-    delegate?.requestOrgUrls(username: username, index: index)
+    self.delegate?.requestOrgUrls(username: username, index: index)
   }
 }
