@@ -55,7 +55,7 @@ class UserListCell: UITableViewCell {
     stackView.axis = .vertical
     stackView.translatesAutoresizingMaskIntoConstraints = false
     stackView.spacing = 3
-    stackView.distribution = .fill
+    stackView.distribution = .fillProportionally
     return stackView
   }()
   private lazy var usernameLabel: UILabel = {
@@ -74,6 +74,18 @@ class UserListCell: UITableViewCell {
     return label
   }()
   var org_Urls = PublishSubject<[String]>()
+  private lazy var bottomViewHeightConstraint: NSLayoutConstraint = {
+    let heightConstraint = NSLayoutConstraint(
+      item: bottomView,
+      attribute: .height,
+      relatedBy: .equal,
+      toItem: nil,
+      attribute: .height,
+      multiplier: 1.0,
+      constant: 40)
+    heightConstraint.priority = UILayoutPriority(rawValue: 1000)
+    return heightConstraint
+  }()
   
   func configure(userInfo: UserInfo, index: Int) {
     selectionStyle = .none
@@ -94,6 +106,7 @@ class UserListCell: UITableViewCell {
       .do(onNext: { _ in
         self.isFetched = true
       })
+      .debug("org---")
       .drive(onNext: { [unowned self] urls in
         self.setupOrgImgViews(orgImgUrls: urls)
         self.delegate?.requestUpdateTableView()
@@ -113,23 +126,27 @@ class UserListCell: UITableViewCell {
     
     let edgeInset: CGFloat = 25
     NSLayoutConstraint.activate([
-      outerStackView.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor, constant: edgeInset),
-      outerStackView.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor, constant: edgeInset),
-      outerStackView.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor, constant: -edgeInset),
-      outerStackView.bottomAnchor.constraint(equalTo: safeAreaLayoutGuide.bottomAnchor, constant: -edgeInset),
+      outerStackView.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor,
+                                          constant: edgeInset),
+      outerStackView.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor,
+                                              constant: edgeInset),
+      outerStackView.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor,
+                                               constant: -edgeInset),
+      outerStackView.bottomAnchor.constraint(equalTo: safeAreaLayoutGuide.bottomAnchor,
+                                             constant: -edgeInset),
       imgView.widthAnchor.constraint(equalToConstant: 50),
       imgView.heightAnchor.constraint(equalToConstant: 50),
       imgView.leadingAnchor.constraint(equalTo: topView.leadingAnchor),
       imgView.topAnchor.constraint(equalTo: topView.topAnchor),
       imgView.bottomAnchor.constraint(equalTo: topView.bottomAnchor),
-      labelStackView.leadingAnchor.constraint(equalTo: imgView.trailingAnchor, constant: 5),
+      labelStackView.leadingAnchor.constraint(equalTo: imgView.trailingAnchor,
+                                              constant: 5),
       labelStackView.topAnchor.constraint(equalTo: topView.topAnchor),
       labelStackView.trailingAnchor.constraint(equalTo: topView.trailingAnchor),
       labelStackView.bottomAnchor.constraint(equalTo: topView.bottomAnchor),
-      bottomView.heightAnchor.constraint(equalToConstant: 40),
+      bottomViewHeightConstraint,
       bottomView.widthAnchor.constraint(equalTo: topView.widthAnchor)
     ])
-    
   }
   
   private func setupOrgImgViews(orgImgUrls: [String]) {
@@ -183,6 +200,7 @@ class UserListCell: UITableViewCell {
   
   @objc func imgViewOrUsernameTapped(recognizer: UITapGestureRecognizer) {
     bottomView.isHidden = !bottomView.isHidden
+    //bottomViewHeightConstraint.isActive = !bottomView.isHidden
     if isFetched {
       delegate?.requestUpdateTableView()
     } else {
