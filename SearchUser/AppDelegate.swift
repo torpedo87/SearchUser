@@ -19,9 +19,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     window?.makeKeyAndVisible()
     let networkManger = NetworkManager()
     let pagingManager = PagingManager()
-    let viewModel = ViewModel(networkManager: networkManger, pagingManager: pagingManager)
-    let viewController = ViewController()
-    viewController.viewModel = viewModel
+    let viewModel = ViewModel(networkManager: networkManger,
+                              pagingManager: pagingManager)
+    let viewController = ViewController(viewModel: viewModel)
     window?.rootViewController = UINavigationController(rootViewController: viewController)
     
     return true

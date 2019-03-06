@@ -12,7 +12,7 @@ import RxCocoa
 
 class ViewController: UIViewController {
   
-  var viewModel: ViewModel!
+  private var viewModel: ViewModel!
   private let bag = DisposeBag()
   private lazy var searchController: UISearchController = {
     let controller = UISearchController(searchResultsController: nil)
@@ -37,6 +37,15 @@ class ViewController: UIViewController {
     spinner.color = UIColor.blue
     return spinner
   }()
+  
+  init(viewModel: ViewModel) {
+    self.viewModel = viewModel
+    super.init(nibName: nil, bundle: nil)
+  }
+  
+  required init?(coder aDecoder: NSCoder) {
+    fatalError("init(coder:) has not been implemented")
+  }
   
   override func viewDidLoad() {
     super.viewDidLoad()
@@ -99,7 +108,6 @@ class ViewController: UIViewController {
       .disposed(by: bag)
     
     let hasNext = viewModel.hasNext.share()
-    
     hasNext
       .bind(to: activityIndicator.rx.isAnimating)
       .disposed(by: bag)

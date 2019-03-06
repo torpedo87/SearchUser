@@ -13,9 +13,9 @@ class PagingManager {
   private let bag = DisposeBag()
   private var currentPage = 1
   private var lastPage = 0
-  var hasNext = PublishSubject<Bool>()
-  var current = PublishSubject<Int>()
-  var last = PublishSubject<Int>()
+  let hasNext = PublishSubject<Bool>()
+  let current = PublishSubject<Int>()
+  let last = PublishSubject<Int>()
   
   init() {
     Observable.combineLatest(current.asObservable(), last.asObservable())

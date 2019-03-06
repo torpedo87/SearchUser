@@ -11,12 +11,12 @@ import RxSwift
 import RxCocoa
 
 class ViewModel {
-  var searchInput = PublishSubject<String>()
-  var reachToBottom = PublishSubject<Bool>()
-  var hasNext = PublishSubject<Bool>()
+  let searchInput = PublishSubject<String>()
+  let reachToBottom = PublishSubject<Bool>()
+  let hasNext = PublishSubject<Bool>()
+  let userInfoList = BehaviorRelay<[UserInfo]>(value: [])
   private var networkManager: NetworkManager!
   private var pagingManager: PagingManager!
-  let userInfoList = BehaviorRelay<[UserInfo]>(value: [])
   private let bag = DisposeBag()
   private let globalScheduler = ConcurrentDispatchQueueScheduler(queue: DispatchQueue.global())
   
@@ -65,7 +65,7 @@ class ViewModel {
       .disposed(by: bag)
   }
   
-  func fetchUserList(finalUrl: URL) -> Observable<[UserInfo]> {
+  private func fetchUserList(finalUrl: URL) -> Observable<[UserInfo]> {
     return networkManager.loadPagedData(finalUrl: finalUrl)
       .do(onNext: { [unowned self] result in
         switch result {

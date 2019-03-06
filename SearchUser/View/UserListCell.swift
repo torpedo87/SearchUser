@@ -15,8 +15,8 @@ protocol UserListCellDelegate: class {
 }
 
 class UserListCell: UITableViewCell {
-  var isFetched = false
-  var isExpanded = false
+  let org_Urls = PublishSubject<[String]>()
+  private var isFetched = false
   private let bag = DisposeBag()
   static let reuseIdentifier: String = "UserListCell"
   private var row: Int?
@@ -45,8 +45,10 @@ class UserListCell: UITableViewCell {
   private lazy var imgView: UIImageView = {
     let imgView = UIImageView()
     imgView.translatesAutoresizingMaskIntoConstraints = false
+    imgView.contentMode = .scaleAspectFit
+    imgView.layer.cornerRadius = 25
+    imgView.clipsToBounds = true
     imgView.isUserInteractionEnabled = true
-    imgView.contentMode = .scaleAspectFill
     return imgView
   }()
   private lazy var labelStackView: UIStackView = {
@@ -72,7 +74,6 @@ class UserListCell: UITableViewCell {
     label.textColor = UIColor.gray
     return label
   }()
-  var org_Urls = PublishSubject<[String]>()
   private lazy var bottomViewHeightConstraint: NSLayoutConstraint = {
     let heightConstraint = NSLayoutConstraint(
       item: bottomView,
@@ -158,6 +159,7 @@ class UserListCell: UITableViewCell {
       orgImgView.layer.borderWidth = 0.5
       orgImgView.layer.borderColor = UIColor.lightGray.cgColor
       orgImgView.layer.cornerRadius = 20
+      orgImgView.clipsToBounds = true
       orgImgView.loadImageWithUrlString(urlString: urlString)
       orgImgViews.append(orgImgView)
     }
@@ -186,7 +188,9 @@ class UserListCell: UITableViewCell {
     let tap = UITapGestureRecognizer(target: self,
                                      action: #selector(imgViewOrUsernameTapped(recognizer:)))
     imgView.addGestureRecognizer(tap)
-    usernameLabel.addGestureRecognizer(tap)
+    let tap2 = UITapGestureRecognizer(target: self,
+                                     action: #selector(imgViewOrUsernameTapped(recognizer:)))
+    usernameLabel.addGestureRecognizer(tap2)
   }
   
   override func prepareForReuse() {
@@ -199,7 +203,6 @@ class UserListCell: UITableViewCell {
   
   @objc func imgViewOrUsernameTapped(recognizer: UITapGestureRecognizer) {
     bottomView.isHidden = !bottomView.isHidden
-    //bottomViewHeightConstraint.isActive = !bottomView.isHidden
     if isFetched {
       delegate?.requestUpdateTableView()
     } else {
