@@ -91,18 +91,18 @@ class ViewController: UIViewController {
       .asObservable()
       .bind(to: tableView.rx.items) {
         (tableView: UITableView, index: Int, element: UserInfo) in
-        if let cell = tableView.dequeueReusableCell(withIdentifier: UserListCell.reuseIdentifier) as? UserListCell {
-          cell.configure(userInfo: element, index: index)
-          cell.delegate = self
-          return cell
-        }
-        return UserListCell()
+        let cell = tableView.dequeueCell() as UserListCell
+        cell.configure(userInfo: element, index: index)
+        return cell
       }
       .disposed(by: bag)
     
     //스크롤이벤트를 전달
     tableView.rx.willDisplayCell
-      .map { return self.isLoadingIndexPath($0.indexPath) }
+      .map { [weak self] tuple -> Bool in
+        //guard let self = self else { return false }
+        return self?.isLoadingIndexPath(tuple.indexPath) ?? false
+      }
       .filter{ $0 }
       .bind(to: viewModel.reachToBottom)
       .disposed(by: bag)
@@ -140,4 +140,18 @@ extension ViewController: UserListCellDelegate {
     }
     
   }
+}
+
+extension UITableView {
+  
+  func dequeueCell<T: UITableViewCell>() -> T {
+    if let cell = self.dequeueReusableCell(withIdentifier: T.reusableIdentifier) as? T {
+      return cell
+    }
+    fatalError()
+  }
+}
+
+extension UITableViewCell {
+  static let reusableIdentifier: String = String(describing: self)
 }

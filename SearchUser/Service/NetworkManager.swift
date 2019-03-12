@@ -34,6 +34,10 @@ enum LoadingError: Error {
 
 class NetworkManager {
   
+  static var shared: NetworkManager {
+    return NetworkManager.init()
+  }
+  
   private let session: URLSession
   init(session: URLSession = .shared) {
     self.session = session

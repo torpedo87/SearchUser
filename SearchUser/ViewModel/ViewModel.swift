@@ -11,17 +11,16 @@ import RxSwift
 import RxCocoa
 
 class ViewModel {
-  let searchInput = PublishSubject<String>()
+  let searchInput = PublishRelay<String>()
   let reachToBottom = PublishSubject<Bool>()
   let hasNext = PublishSubject<Bool>()
   let userInfoList = BehaviorRelay<[UserInfo]>(value: [])
-  private var networkManager: NetworkManager!
+  //private let networkManager = NetworkManager.singletonNetworkManager
   private var pagingManager: PagingManager!
   private let bag = DisposeBag()
   private let globalScheduler = ConcurrentDispatchQueueScheduler(queue: DispatchQueue.global())
   
-  init(networkManager: NetworkManager, pagingManager: PagingManager) {
-    self.networkManager = networkManager
+  init(pagingManager: PagingManager) {
     self.pagingManager = pagingManager
     
     //검색어 변경시 페이지 리셋
@@ -34,19 +33,19 @@ class ViewModel {
     //검색어와 페이지를 통해 url 요청해서 유저 정보 가져오기
     Observable.combineLatest(searchInput.asObservable(),
                              pagingManager.current.asObservable())
-      .map { [unowned self] query, page -> URL? in
-        return self.getSearchUrl(query: query, page: page)
+      .map { [weak self] query, page -> URL? in
+        return self?.getSearchUrl(query: query, page: page)
       }
       .filter{ $0 != nil }
       .subscribeOn(globalScheduler)
-      .flatMap({ [unowned self] finalUrl -> Observable<[UserInfo]> in
-        return self.fetchUserList(finalUrl: finalUrl!)
+      .flatMap({ [weak self] finalUrl -> Observable<[UserInfo]> in
+        return self?.fetchUserList(finalUrl: finalUrl!) ?? Observable.empty()
       })
-      .map({ newList in
+      .withLatestFrom(userInfoList, resultSelector: { (newList, userInfoList) -> [UserInfo] in
         if pagingManager.getCurrentPage() == 1 {
           return newList
         } else {
-          return self.userInfoList.value + newList
+          return userInfoList + newList
         }
       })
       .bind(to: userInfoList)
@@ -66,7 +65,7 @@ class ViewModel {
   }
   
   private func fetchUserList(finalUrl: URL) -> Observable<[UserInfo]> {
-    return networkManager.loadPagedData(finalUrl: finalUrl)
+    return NetworkManager.shared.loadPagedData(finalUrl: finalUrl)
       .do(onNext: { [unowned self] result in
         switch result {
         case .success(let pagedResponse):
@@ -93,7 +92,7 @@ class ViewModel {
   func fetchOrgUrls(username: String, index: Int) -> Observable<[String]> {
     if let finalUrl = getOrgUrl(username: username) {
       
-      return networkManager.loadData(finalUrl: finalUrl)
+      return NetworkManager.shared.loadData(finalUrl: finalUrl)
         .map { [weak self] result in
           guard let self = self else { return [] }
           switch result {

@@ -17,10 +17,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
   func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
     window = UIWindow()
     window?.makeKeyAndVisible()
-    let networkManger = NetworkManager()
     let pagingManager = PagingManager()
-    let viewModel = ViewModel(networkManager: networkManger,
-                              pagingManager: pagingManager)
+    let viewModel = ViewModel(pagingManager: pagingManager)
     let viewController = ViewController(viewModel: viewModel)
     window?.rootViewController = UINavigationController(rootViewController: viewController)
     

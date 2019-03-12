@@ -150,7 +150,7 @@ class UserListCell: UITableViewCell {
   
   private func setupOrgImgViews(orgImgUrls: [String]) {
     
-    orgImgUrls.forEach { urlString in
+    orgImgViews = orgImgUrls.map { urlString -> UIImageView in
       let orgImgView = UIImageView()
       orgImgView.translatesAutoresizingMaskIntoConstraints = false
       orgImgView.widthAnchor.constraint(equalToConstant: 40).isActive = true
@@ -161,11 +161,8 @@ class UserListCell: UITableViewCell {
       orgImgView.layer.cornerRadius = 20
       orgImgView.clipsToBounds = true
       orgImgView.loadImageWithUrlString(urlString: urlString)
-      orgImgViews.append(orgImgView)
-    }
-    
-    orgImgViews.forEach {
-      bottomView.addSubview($0)
+      bottomView.addSubview(orgImgView)
+      return orgImgView
     }
     
     var lastImgView: UIImageView?
